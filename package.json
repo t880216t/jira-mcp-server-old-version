@@ -1,5 +1,5 @@
 {
-  "name": "jira-mcp-server",
+  "name": "@t880216t/jira-mcp-server",
   "version": "0.1.0",
   "description": "Model Context Protocol (MCP) Server for Jira integration",
   "main": "dist/index.js",

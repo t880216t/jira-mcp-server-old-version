@@ -40,7 +40,7 @@ A Model Context Protocol (MCP) server for Jira integration. This server allows A
 
 ```bash
 # Clone the repository
-git clone https://github.com/samuelrizzo/jira-mcp-server.git
+git clone https://github.com/t880216t/jira-mcp-server.git
 cd jira-mcp-server
 
 # Install dependencies
@@ -59,7 +59,7 @@ Add the following configuration to your cursor/windsurf mcp settings file:
 ```json
 {
   "mcpServers": {
-    "jira-mcp": {
+    "@t880216t/jira-mcp-server": {
       "command": "node",
       "args": ["./dist/index.js"],
       "env": {
