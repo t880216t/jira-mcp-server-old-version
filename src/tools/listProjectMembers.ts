@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ProjectRole, RoleActor } from "../types/index.js";
 import { JiraProjectMembersRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 
 /**
  * Description object for the Jira list project members tool
@@ -21,15 +21,15 @@ export const listProjectMembersToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
             projectKey: {
                 type: "string",
@@ -46,8 +46,8 @@ export const listProjectMembersToolDescription = {
  * @async
  * @param {Object} args - The arguments for listing project members
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @param {string} args.projectKey - The project key to get members for
  * @returns {Promise<Object>} A formatted response with the list of project members
  * @throws {Error} If the required credentials are missing or the request fails
@@ -56,19 +56,19 @@ export async function listProjectMembers(args: any) {
     const validatedArgs = await JiraProjectMembersRequestSchema.validate(args);
 
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
     const projectKey = validatedArgs.projectKey;
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
-    const rolesResponse = await axios.get(`https://${jiraHost}/rest/api/3/project/${projectKey}/role`, {
+    const rolesResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/project/${projectKey}/role`, {
         headers: {
             'Authorization': authHeader,
             'Accept': 'application/json',
@@ -96,7 +96,7 @@ export async function listProjectMembers(args: any) {
             if (typeof roleUrl === 'string') {
 
                 const roleId = roleUrl.split('/').pop();
-                const detailUrl = `https://${jiraHost}/rest/api/3/project/${projectKey}/role/${roleId}`;
+                const detailUrl = `${normalizeJiraHost(jiraHost)}/rest/api/3/project/${projectKey}/role/${roleId}`;
 
                 roleDetailsPromises.push(
                     axios.get<ProjectRole>(detailUrl, {

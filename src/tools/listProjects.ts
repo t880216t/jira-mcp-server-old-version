@@ -1,6 +1,6 @@
 import axios from "axios";
 import { JiraApiRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 
 /**
  * Description object for the Jira list projects tool
@@ -20,15 +20,15 @@ export const listProjectsToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
         },
         required: [],
@@ -41,8 +41,8 @@ export const listProjectsToolDescription = {
  * @async
  * @param {Object} args - The arguments for listing projects
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @returns {Promise<Object>} A formatted response with the list of projects
  * @throws {Error} If the required credentials are missing or the request fails
  */
@@ -50,19 +50,19 @@ export async function listProjects(args: any) {
     const validatedArgs = await JiraApiRequestSchema.validate(args);
 
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
     try {
-        const response = await axios.get(`https://${jiraHost}/rest/api/3/project`, {
+        const response = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/project`, {
             headers: {
                 'Authorization': authHeader,
                 'Accept': 'application/json',

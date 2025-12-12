@@ -10,15 +10,15 @@ function getCommonJiraProperties() {
             description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
             default: process.env.JIRA_HOST || "",
         },
-        email: {
+        loginName: {
             type: "string",
-            description: "Email address associated with the Jira account",
-            default: process.env.JIRA_EMAIL || "",
+            description: "Login name for Jira 8.1.0 authentication",
+            default: process.env.JIRA_LOGIN_NAME || "",
         },
-        apiToken: {
+        loginToken: {
             type: "string",
-            description: "API token for Jira authentication",
-            default: process.env.JIRA_API_TOKEN || "",
+            description: "Login token for Jira 8.1.0 authentication",
+            default: process.env.JIRA_LOGIN_TOKEN || "",
         },
     };
 }

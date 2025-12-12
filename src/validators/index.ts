@@ -14,19 +14,18 @@ export const JiraApiRequestSchema = yup.object({
             'Jira host is required and must be a valid domain (e.g., "company.atlassian.net")',
             (value) => !!value && value.trim().length > 0
         ),
-    email: yup.string()
-        .email('Invalid email format. Please provide a valid email associated with your Jira account')
-        .default(process.env.JIRA_EMAIL || "")
+    loginName: yup.string()
+        .default(process.env.JIRA_LOGIN_NAME || "")
         .test(
-            'check-email',
-            'Email is required for Jira authentication',
+            'check-login-name',
+            'Login name is required for Jira 8.1.0 authentication',
             (value) => !!value && value.trim().length > 0
         ),
-    apiToken: yup.string()
-        .default(process.env.JIRA_API_TOKEN || "")
+    loginToken: yup.string()
+        .default(process.env.JIRA_LOGIN_TOKEN || "")
         .test(
-            'check-api-token',
-            'API token is required for Jira authentication',
+            'check-login-token',
+            'Login token is required for Jira 8.1.0 authentication',
             (value) => !!value && value.trim().length > 0
         ),
 });

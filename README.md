@@ -64,8 +64,8 @@ Add the following configuration to your cursor/windsurf mcp settings file:
       "args": ["./dist/index.js"],
       "env": {
         "JIRA_HOST": "your-domain.atlassian.net",
-        "JIRA_EMAIL": "your-email@example.com",
-        "JIRA_API_TOKEN": "your-api-token-here"
+        "JIRA_LOGIN_NAME": "your-login-name",
+        "JIRA_LOGIN_TOKEN": "your-login-token-here"
       }
     }
   }
@@ -93,8 +93,8 @@ Lists all Jira projects the authenticated user has access to.
 **Parameters:**
 
 - `jiraHost`: Your Jira domain (e.g., 'your-domain.atlassian.net')
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 2. Get Issue Details (`mcp_jira_get_issue`)
 
@@ -104,8 +104,8 @@ Retrieves detailed information about a specific Jira issue.
 
 - `issueKey`: The Jira issue key (e.g., 'PROJECT-123')
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 3. Search Issues (`mcp_jira_search_issues`)
 
@@ -116,8 +116,8 @@ Searches for issues in a specific project, optionally filtered by assignee.
 - `projectKey`: The Jira project key
 - `assigneeName`: (Optional) Filter issues by assignee name
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 4. List Project Members (`mcp_jira_list_project_members`)
 
@@ -127,8 +127,8 @@ Lists all members of a specific Jira project.
 
 - `projectKey`: The Jira project key
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 5. Check User Issues (`mcp_jira_check_user_issues`)
 
@@ -139,8 +139,8 @@ Checks if a user is a member of a project and lists their assigned issues.
 - `projectKey`: The Jira project key
 - `userName`: The display name of the user to check
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 6. Create Issue (`mcp_jira_create_issue`)
 
@@ -156,8 +156,8 @@ Creates a new issue in a Jira project with specified details.
 - `reporterName`: (Optional) The display name of the person reporting the issue
 - `sprintId`: (Optional) ID of the sprint to add the issue to
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ### 7. List Sprints (`mcp_jira_list_sprints`)
 
@@ -169,8 +169,8 @@ Lists current sprints in Jira with filtering options.
 - `projectKey`: (Optional) Project key to find sprints associated with the project
 - `state`: (Optional) Sprint state to filter by (active, future, closed, or all), defaults to 'active'
 - `jiraHost`: Your Jira domain
-- `email`: Your Jira email
-- `apiToken`: Your Jira API token
+- `loginName`: Login name for Jira 8.1.0 authentication
+- `loginToken`: Login token for Jira 8.1.0 authentication
 
 ## Usage Examples
 

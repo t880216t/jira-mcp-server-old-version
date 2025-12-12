@@ -57,10 +57,10 @@ const toolConfigs: Record<string, ToolConfig> = {
 
 async function validateAndGetCredentials(args: any) {
     const jiraHost = args.jiraHost || process.env.JIRA_HOST;
-    const email = args.email || process.env.JIRA_EMAIL;
-    const apiToken = args.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = args.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = args.loginToken || process.env.JIRA_LOGIN_TOKEN;
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
     return args;
 }
 

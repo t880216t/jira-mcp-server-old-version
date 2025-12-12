@@ -1,6 +1,6 @@
 import axios from "axios";
 import { JiraCreateIssueRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 import { toADF } from "../utils/adfUtils.js";
 
 /**
@@ -21,15 +21,15 @@ export const createIssueToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
             projectKey: {
                 type: "string",
@@ -71,8 +71,8 @@ export const createIssueToolDescription = {
  * @async
  * @param {Object} args - The arguments for creating the issue
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @param {string} args.projectKey - The project key
  * @param {string} args.summary - Issue title/summary
  * @param {object} args.description - Issue description (ADF JSON object, Atlassian Document Format)
@@ -87,8 +87,8 @@ export async function createIssue(args: any) {
     const validatedArgs = await JiraCreateIssueRequestSchema.validate(args);
 
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
     const projectKey = validatedArgs.projectKey;
     const summary = validatedArgs.summary;
     const description = validatedArgs.description;
@@ -98,13 +98,13 @@ export async function createIssue(args: any) {
     const reporterName = validatedArgs.reporterName;
     const sprintId = validatedArgs.sprintId;
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
     try {
         // Create the issue payload
@@ -124,7 +124,7 @@ export async function createIssue(args: any) {
         // If assignee name is provided, get their accountId
         if (assigneeName) {
             try {
-                const userResponse = await axios.get(`https://${jiraHost}/rest/api/3/user/search`, {
+                const userResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/user/search`, {
                     params: {
                         query: assigneeName
                     },
@@ -151,7 +151,7 @@ export async function createIssue(args: any) {
         // If reporter name is provided, get their accountId
         if (reporterName) {
             try {
-                const userResponse = await axios.get(`https://${jiraHost}/rest/api/3/user/search`, {
+                const userResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/user/search`, {
                     params: {
                         query: reporterName
                     },
@@ -176,7 +176,7 @@ export async function createIssue(args: any) {
         }
 
         // Create the issue
-        const response = await axios.post(`https://${jiraHost}/rest/api/3/issue`, issuePayload, {
+        const response = await axios.post(`${normalizeJiraHost(jiraHost)}/rest/api/3/issue`, issuePayload, {
             headers: {
                 'Authorization': authHeader,
                 'Accept': 'application/json',
@@ -189,7 +189,7 @@ export async function createIssue(args: any) {
         // Add the issue to a sprint if sprintId is provided
         if (sprintId && createdIssue.id) {
             try {
-                await axios.post(`https://${jiraHost}/rest/agile/1.0/sprint/${sprintId}/issue`, {
+                await axios.post(`${normalizeJiraHost(jiraHost)}/rest/agile/1.0/sprint/${sprintId}/issue`, {
                     issues: [createdIssue.id]
                 }, {
                     headers: {
@@ -204,7 +204,7 @@ export async function createIssue(args: any) {
         }
 
         // Fetch the created issue to get full details
-        const issueResponse = await axios.get(`https://${jiraHost}/rest/api/3/issue/${createdIssue.key}`, {
+        const issueResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/issue/${createdIssue.key}`, {
             headers: {
                 'Authorization': authHeader,
                 'Accept': 'application/json',
@@ -218,7 +218,7 @@ export async function createIssue(args: any) {
         formattedResponse += `## Issue Details\n\n`;
         formattedResponse += `| Field | Value |\n`;
         formattedResponse += `|-------|-------|\n`;
-        formattedResponse += `| Key | [${issue.key}](https://${jiraHost}/browse/${issue.key}) |\n`;
+        formattedResponse += `| Key | [${issue.key}](${normalizeJiraHost(jiraHost)}/browse/${issue.key}) |\n`;
         formattedResponse += `| Summary | ${issue.fields.summary} |\n`;
         formattedResponse += `| Type | ${issue.fields.issuetype?.name || issueType} |\n`;
         formattedResponse += `| Project | ${projectKey} |\n`;
@@ -252,7 +252,7 @@ export async function createIssue(args: any) {
             descriptionPreview = '[ADF description provided]';
         }
         formattedResponse += `\n## Description\n\n${descriptionPreview}\n\n`;
-        formattedResponse += `\n**Issue link:** [${issue.key}](https://${jiraHost}/browse/${issue.key})\n`;
+        formattedResponse += `\n**Issue link:** [${issue.key}](${normalizeJiraHost(jiraHost)}/browse/${issue.key})\n`;
 
         return {
             content: [{ type: "text", text: formattedResponse }],

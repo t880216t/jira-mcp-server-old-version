@@ -1,6 +1,6 @@
 import axios from "axios";
 import { JiraSprintRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 
 /**
  * Description object for the Jira list sprints tool
@@ -20,15 +20,15 @@ export const listSprintsToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
             boardId: {
                 type: "string",
@@ -55,8 +55,8 @@ export const listSprintsToolDescription = {
  * @async
  * @param {Object} args - The arguments for retrieving sprints
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @param {string} [args.boardId] - Optional board ID to filter by
  * @param {string} [args.projectKey] - Optional project key to filter by
  * @param {string} [args.state] - Sprint state to filter by (active, future, closed, or all)
@@ -67,19 +67,19 @@ export async function listSprints(args: any) {
     const validatedArgs = await JiraSprintRequestSchema.validate(args);
 
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
     const boardId = validatedArgs.boardId;
     const projectKey = validatedArgs.projectKey;
     const state = validatedArgs.state || 'active';
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
     try {
         let boardIds: string[] = [];
@@ -89,7 +89,7 @@ export async function listSprints(args: any) {
         } 
         
         else if (projectKey) {
-            const boardResponse = await axios.get(`https://${jiraHost}/rest/agile/1.0/board`, {
+            const boardResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/agile/1.0/board`, {
                 params: {
                     projectKeyOrId: projectKey
                 },
@@ -110,7 +110,7 @@ export async function listSprints(args: any) {
         } 
         
         else {
-            const boardResponse = await axios.get(`https://${jiraHost}/rest/agile/1.0/board`, {
+            const boardResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/agile/1.0/board`, {
                 headers: {
                     'Authorization': authHeader,
                     'Accept': 'application/json',
@@ -140,7 +140,7 @@ export async function listSprints(args: any) {
                     sprintParams.state = state;
                 }
                 
-                const sprintResponse = await axios.get(`https://${jiraHost}/rest/agile/1.0/board/${bId}/sprint`, {
+                const sprintResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/agile/1.0/board/${bId}/sprint`, {
                     params: sprintParams,
                     headers: {
                         'Authorization': authHeader,
@@ -226,11 +226,11 @@ export async function listSprints(args: any) {
                 formattedResponse += `**Goal:** ${sprint.goal}\n`;
             }
             
-            formattedResponse += `**View in Jira:** https://${jiraHost}/jira/software/projects/${projectKey || 'browse'}/boards/${sprint.boardId}/sprints/${sprint.id}\n\n`;
+            formattedResponse += `**View in Jira:** ${normalizeJiraHost(jiraHost)}/jira/software/projects/${projectKey || 'browse'}/boards/${sprint.boardId}/sprints/${sprint.id}\n\n`;
             
             
             try {
-                const issuesResponse = await axios.get(`https://${jiraHost}/rest/agile/1.0/sprint/${sprint.id}/issue`, {
+                const issuesResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/agile/1.0/sprint/${sprint.id}/issue`, {
                     params: {
                         fields: 'summary,status,assignee,issuetype'
                     },
@@ -252,7 +252,7 @@ export async function listSprints(args: any) {
                         const status = issue.fields.status ? issue.fields.status.name : 'Unknown';
                         const type = issue.fields.issuetype ? issue.fields.issuetype.name : 'Task';
                         
-                        formattedResponse += `| [${issue.key}](https://${jiraHost}/browse/${issue.key}) | ${issue.fields.summary} | ${type} | ${status} | ${assignee} |\n`;
+                        formattedResponse += `| [${issue.key}](${normalizeJiraHost(jiraHost)}/browse/${issue.key}) | ${issue.fields.summary} | ${type} | ${status} | ${assignee} |\n`;
                     });
                 } else {
                     formattedResponse += `No issues found in this sprint.\n`;

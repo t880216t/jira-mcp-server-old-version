@@ -1,6 +1,6 @@
 import axios from "axios";
 import { JiraSearchIssuesRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 
 /**
  * Description object for the Jira search issues tool
@@ -20,15 +20,15 @@ export const searchIssuesToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
             projectKey: {
                 type: "string",
@@ -49,8 +49,8 @@ export const searchIssuesToolDescription = {
  * @async
  * @param {Object} args - The arguments for the search
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @param {string} args.projectKey - The project key to search in
  * @param {string} [args.assigneeName] - Optional assignee name to filter by
  * @returns {Promise<Object>} A formatted response with the search results
@@ -59,16 +59,16 @@ export const searchIssuesToolDescription = {
 export async function searchIssues(args: any) {
     const validatedArgs = await JiraSearchIssuesRequestSchema.validate(args);
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
     const projectKey = validatedArgs.projectKey;
     const assigneeName = validatedArgs.assigneeName;
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
     let jql = `project = "${projectKey}"`;
     if (assigneeName) {
@@ -76,9 +76,9 @@ export async function searchIssues(args: any) {
     }
     jql += ` ORDER BY created DESC`;
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
-    const response = await axios.get(`https://${jiraHost}/rest/api/3/search`, {
+    const response = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/search`, {
         params: {
             jql,
             maxResults: 50,

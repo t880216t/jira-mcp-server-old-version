@@ -1,7 +1,7 @@
 import axios from "axios";
 import { ProjectRole, RoleActor } from "../types/index.js";
 import { JiraCheckUserIssuesRequestSchema } from "../validators/index.js";
-import { createAuthHeader, validateCredentials } from "../utils/auth.js";
+import { createAuthHeader, validateCredentials, normalizeJiraHost } from "../utils/auth.js";
 
 /**
  * Description object for the Jira check user issues tool
@@ -21,15 +21,15 @@ export const checkUserIssuesToolDescription = {
                 description: "The Jira host URL (e.g., 'your-domain.atlassian.net')",
                 default: process.env.JIRA_HOST || "",
             },
-            email: {
+            loginName: {
                 type: "string",
-                description: "Email address associated with the Jira account",
-                default: process.env.JIRA_EMAIL || "",
+                description: "Login name for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_NAME || "",
             },
-            apiToken: {
+            loginToken: {
                 type: "string",
-                description: "API token for Jira authentication",
-                default: process.env.JIRA_API_TOKEN || "",
+                description: "Login token for Jira 8.1.0 authentication",
+                default: process.env.JIRA_LOGIN_TOKEN || "",
             },
             projectKey: {
                 type: "string",
@@ -50,8 +50,8 @@ export const checkUserIssuesToolDescription = {
  * @async
  * @param {Object} args - The arguments for checking user issues
  * @param {string} args.jiraHost - The Jira host URL
- * @param {string} args.email - Email for authentication
- * @param {string} args.apiToken - API token for authentication
+ * @param {string} args.loginName - Login name for authentication
+ * @param {string} args.loginToken - Login token for authentication
  * @param {string} args.projectKey - The project key to check in
  * @param {string} args.userName - The display name of the user to check for
  * @returns {Promise<Object>} A formatted response with user membership status and assigned issues
@@ -61,20 +61,20 @@ export async function checkUserIssues(args: any) {
     const validatedArgs = await JiraCheckUserIssuesRequestSchema.validate(args);
 
     const jiraHost = validatedArgs.jiraHost || process.env.JIRA_HOST;
-    const email = validatedArgs.email || process.env.JIRA_EMAIL;
-    const apiToken = validatedArgs.apiToken || process.env.JIRA_API_TOKEN;
+    const loginName = validatedArgs.loginName || process.env.JIRA_LOGIN_NAME;
+    const loginToken = validatedArgs.loginToken || process.env.JIRA_LOGIN_TOKEN;
     const projectKey = validatedArgs.projectKey;
     const userName = validatedArgs.userName;
 
-    if (!jiraHost || !email || !apiToken) {
-        throw new Error('Missing required authentication credentials. Please provide jiraHost, email, and apiToken.');
+    if (!jiraHost || !loginName || !loginToken) {
+        throw new Error('Missing required authentication credentials. Please provide jiraHost, loginName, and loginToken.');
     }
 
-    validateCredentials(jiraHost, email, apiToken);
+    validateCredentials(jiraHost, loginName, loginToken);
 
-    const authHeader = createAuthHeader(email, apiToken);
+    const authHeader = createAuthHeader(loginName, loginToken);
 
-    const rolesResponse = await axios.get(`https://${jiraHost}/rest/api/3/project/${projectKey}/role`, {
+    const rolesResponse = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/project/${projectKey}/role`, {
         headers: {
             'Authorization': authHeader,
             'Accept': 'application/json',
@@ -103,7 +103,7 @@ export async function checkUserIssues(args: any) {
         for (const [roleName, roleUrl] of Object.entries(projectRoles)) {
             if (typeof roleUrl === 'string') {
                 const roleId = roleUrl.split('/').pop();
-                const detailUrl = `https://${jiraHost}/rest/api/3/project/${projectKey}/role/${roleId}`;
+                const detailUrl = `${normalizeJiraHost(jiraHost)}/rest/api/3/project/${projectKey}/role/${roleId}`;
 
                 roleDetailsPromises.push(
                     axios.get<ProjectRole>(detailUrl, {
@@ -160,7 +160,7 @@ export async function checkUserIssues(args: any) {
 
             const jql = `project = "${projectKey}" AND assignee = "${userName}" ORDER BY created DESC`;
 
-            const response = await axios.get(`https://${jiraHost}/rest/api/3/search`, {
+            const response = await axios.get(`${normalizeJiraHost(jiraHost)}/rest/api/3/search`, {
                 params: {
                     jql,
                     maxResults: 50,
